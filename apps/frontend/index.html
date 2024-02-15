@@ -5,8 +5,8 @@
         console.info(json);
     }
     (async function test() {
-        await call("http://localhost:5000/weatherforecast");
-        await call("http://localhost:3100/list?id=2");
-        await call("http://localhost:4100/");
+        await call("http://dotnet.localhost:8010/weatherforecast");
+        await call("http://node.localhost:8010/list?id=2");
+        await call("http://python.localhost:8010/");
     })();
 </script>

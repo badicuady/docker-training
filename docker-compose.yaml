@@ -1,0 +1,101 @@
+version: "3.8"
+
+services:
+
+  traefik:
+    image: "traefik:latest"
+    container_name: "traefik"
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+    ports:
+      - "8010:80"
+      - "8020:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    labels:
+      - "traefik.port=8010"
+  
+  whoami:
+    image: "traefik/whoami"
+    ports:
+      - 8030-8039:80
+    deploy:
+      replicas: 2
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
+
+  mysql:
+    image: mysql:8.3
+    restart: always
+    environment:
+      MYSQL_DATABASE: test
+      MYSQL_ROOT_PASSWORD: 123456
+    volumes:
+      - ./db/temp:/var/lib/mysql
+    ports:
+      - 3306:3306
+
+  dotnet:
+    build: 
+      context: ./apps/dotnet/
+      dockerfile: Dockerfile
+    image: dotnet:latest
+    restart: always
+    ports:
+      - 5000-5010:5000
+    deploy:
+      replicas: 2
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dotnet.rule=Host(`dotnet.localhost`)"
+
+  node:
+    build: 
+      context: ./apps/node/ 
+      dockerfile: Dockerfile
+    image: node:latest
+    restart: always
+    ports:
+      - 3100-3110:3100
+    deploy:
+      replicas: 2
+    depends_on:
+      - mysql
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.node.rule=Host(`node.localhost`)"
+
+  python:
+    build:
+      context: ./apps/python/ 
+      dockerfile: Dockerfile
+    image: python:latest
+    restart: always
+    ports:
+      - 4100-4110:4100
+    deploy:
+      replicas: 2
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.python.rule=Host(`python.localhost`)"
+
+  frontend:
+    build:
+      context: ./apps/frontend/
+      dockerfile: Dockerfile
+    image: frontend:latest
+    restart: always
+    ports:
+      - 8091-8099:80
+    deploy:
+      replicas: 2
+    depends_on:
+      - python
+      - node
+      - dotnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`frontend.localhost`)"
